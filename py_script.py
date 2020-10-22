@@ -33,6 +33,9 @@ for count, i in enumerate(data.shipping_code):
 #%%
 data.shipping_code
 #%%
-labels  #diccionario con elementos de la variable 'categories' como keys
+labels  # Resultado de la ejecucion: diccionario con elementos de la variable 'categories' como keys
         #y como values para cada key la lista de id que pertenecen a esa key.
-        #el id se obtiene de del campo id del shipping_code
+        #el id se obtiene de del campo id del shipping_code.
+        
+        #p.e labels['china'] =[100, [0,1,3,6,10,35,29,...]] 
+        #          categoria  numero registros      id de cada registro
