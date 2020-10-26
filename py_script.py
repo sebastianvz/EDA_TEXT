@@ -1,6 +1,10 @@
 #%%
 import requests
 import pandas as pd
+import nltk
+import unidecode
+
+nltk.download('punkt')
 #%%
 url = 'http://cubiq.mekagroupcol.com/externalapi/getMeasure'
 #body = {"limit": "10"}
@@ -9,39 +13,40 @@ response = requests.post(url, data = body, headers = {"auth": "CcKAtnb8hI5cSHr86
 mesarure_ocr= response.json()
 display(len(mesarure_ocr['measures']),)
 data= pd.DataFrame.from_dict(response.json()['measures'])
-
 #%%
+import re
+re_list = '|'.join([r'[0-9]+',r'[^\w]'])
+label = {}
 label_num = []
-labels=dict()
-categories = ['usps','amazon', 'dhl',"fedex", 'ups', 'china', 'singpost','royal', 'canada']
-#recorrer todas los elementos en shipping code
-def read_courier(input_courier):
-    if (input_courier!=None and len(input_courier)!=0):
-        courier = str(input_courier[0]['courier'].lower()) #traer courier
+label['unk']=0
+categories = ['usps','amazon', 'dhl',"fedex", 'ups']
+unknown_categories = []
+def read_ocr(input_ocr, num):
+    if (input_ocr!=None and len(input_ocr)!=0):
+        ocr_txt = unidecode.unidecode(input_ocr.lower().replace('\n', ' '))
+        ocr_txt = ' '.join(re.sub(re_list, ' ', ocr_txt).split())
+        ocr = nltk.word_tokenize(ocr_txt)
         cont = 0
-        for category in categories: #recorrer categories para comparar
+        for category in categories: 
             cont+=1
-            if category in courier:
-                label_num.append(categories.index(category))
-                if category not in labels: #si se encuentra crear una lista con un zero al principio y el id del elemento
-                    labels[category]=[0, list(input_courier[0]['id'])]   
-                    break                 
+            if category in ocr:
+                if category not in label:
+                    label[category]=0
+                    label_num.append(categories.index(category))
+                    break   
                 else:
-                    labels[category][1].append(input_courier[0]['id'])  #seguir incrementando el contador y añadiendo id 
-                    labels[category][0]=len(labels[category][1])
+                    label[category]+=1
+                    label_num.append(categories.index(category))
                     break
-            if cont==9:
-                label_num.append(9)
-                cont=0
-
+            if cont==5:
+                label['unk']+=1
+                unknown_categories.append(num)
+                label_num.append(5)
     else:
-        label_num.append(9)
-        # print('None!')                
-for count, i in enumerate(data.shipping_code):
-    read_courier(i)
+         label['unk']+=1
+         label_num.append(5)
+for count, i in enumerate(data.ocr):
+    read_ocr(i, count)
+label.pop('unk',None)
 #%%
-data['clf']=label_num
-#%%
-labels['china']  #diccionario con elementos de la variable 'categories' como keys
-        #y como values para cada key la lista de id que pertenecen a esa key.
-        #el id se obtiene de del campo id del shipping_code
+data['label'] = label_num
